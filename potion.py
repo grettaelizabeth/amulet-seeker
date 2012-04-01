@@ -419,7 +419,7 @@ class PotionStore():
   ### buy a potion
   ### milky (12)
   ### price 134
-  ### charisma 18 (fix the charisma mappings while you're at it
+  ### charisma 18
   ### then watch it actually do the right thing right here
   def IsValidPrice(self, price):
     return self.price_bands.contains(price)
@@ -594,8 +594,7 @@ class SellPotionMenuItem(menu.MenuItem):
     player_charisma = charisma.Charisma(raw_input('What is your charisma? '))
     charisma_factor = player_charisma.CharismaFactor()
 
-    #tourist_with_shirt = raw_input(
-    #  'Are you a tourist wearing a Hawaiian shirt? ')
+    # tourist <= lvl 15, visible hawaiian shirt, visible tshirt
     # need to validate y/n input here, and calculate sucker_factor
     sucker_factor = 1.0
 

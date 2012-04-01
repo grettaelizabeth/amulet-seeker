@@ -13,20 +13,21 @@ class Charisma:
     self.charisma = charisma
 
 
-  # fix these to be right
   def CharismaFactor(self):
-    if(self.charisma <= 7):
-      return 0.5
-    if(self.charisma == 8 or self.charisma == 9):
-      return 0.666
-    if(self.charisma == 10 or self.charisma == 11):
-      return 0.75
-    if(self.charisma >= 12 and self.charisma <= 15):
+    if(self.charisma <= 6):
+      return 2.0
+    if(self.charisma == 6 or self.charisma == 7):
+      return 1.5
+    if(self.charisma >= 8 and self.charisma <= 10):
+      return 1.33
+    if(self.charisma >= 11 and self.charisma <= 15):
       return 1.0
     if(self.charisma == 16 or self.charisma == 17):
-      return 1.25
-    if(self.charisma >= 18):
-      return 1.33
+      return 0.75
+    if(self.charisma == 18):
+      return 0.67
+    if(self.charisma > 18):
+      return 0.5
     print 'Charisma Error!'
     return 0
 
