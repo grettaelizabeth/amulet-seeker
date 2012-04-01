@@ -411,18 +411,8 @@ class PotionStore():
     self.Merge(canonical_potion_class, unidentified_potion_class)
 
 
-  ### current problem: I can't remember the python interface for looking
-  ### up whether a list contains a particular thing.  Start here next:
-  ### fix up this line.  Then do:
-  ### potions.py
-  ### load 'game'
-  ### buy a potion
-  ### milky (12)
-  ### price 134
-  ### charisma 18
-  ### then watch it actually do the right thing right here
   def IsValidPrice(self, price):
-    return self.price_bands.contains(price)
+    return self.price_bands.has_key(price)
 
 
   def AddPriceInformation(self, description, list_prices):
@@ -591,33 +581,28 @@ class SellPotionMenuItem(menu.MenuItem):
 
     sale_price = int(raw_input('What sale price was offered? '))
 
-    player_charisma = charisma.Charisma(raw_input('What is your charisma? '))
-    charisma_factor = player_charisma.CharismaFactor()
-
     # tourist <= lvl 15, visible hawaiian shirt, visible tshirt
     # need to validate y/n input here, and calculate sucker_factor
     sucker_factor = 1.0
 
-    potion_store.AddPriceInformation(description,
-                                     self.GetListPrices(sale_price,
-                                                        charisma_factor,
-                                                        sucker_factor))
+    potion_store.AddPriceInformation(
+      description, self.GetListPricesFromSalePrice(sale_price,
+                                                   sucker_factor))
     self.menu_looper.ReturnToTop()
 
   # this definitely doesn't belong here
-  def GetListPrices(self, sale_price, charisma_factor, sucker_factor):
+  def GetListPricesFromSalePrice(self, sale_price, sucker_factor):
     # sucker_factor is always 1.0 for now so ignore it
-    # we have to get rid of charisma_factor
-    list_price = int(sale_price * charisma_factor)
     prices = []
-    if self.potion_store.IsValidPrice(list_price):
-      prices.append(list_price)
-    shop_markup_price = int(list_price / 1.333)
-    if self.potion_store.IsValidPrice(shop_markup_price):
-      prices.append(shop_markup_price)
-    print 'List prices: '
-    print prices
-    return prices
+    list_price = int(2.0 * sale_price)
+    for price in [list_price, list_price - 1]:
+      if self.potion_store.IsValidPrice(price):
+        prices.append(price)
+      shop_markup_price = int(price * 1.334)
+      for shop_price in [shop_markup_price, shop_markup_price - 1]:
+        if self.potion_store.IsValidPrice(shop_price):
+          prices.append(shop_price)
+    return set(prices)
 
 
 class BuyPotionMenuItem(menu.MenuItem):
@@ -643,29 +628,31 @@ class BuyPotionMenuItem(menu.MenuItem):
     player_charisma = charisma.Charisma(raw_input('What is your charisma? '))
     charisma_factor = player_charisma.CharismaFactor()
 
-    #tourist with shirt stuff
+    # tourist <= lvl 15, visible hawaiian shirt, visible tshirt
+    # need to validate y/n input here, and calculate sucker_factor
     sucker_factor = 1.0
 
-    self.potion_store.AddPriceInformation(description,
-                                          self.GetListPrices(buy_price,
-                                                             charisma_factor,
-                                                             sucker_factor))
+    self.potion_store.AddPriceInformation(
+      description, self.GetListPricesFromBuyPrice(buy_price,
+                                                  charisma_factor,
+                                                  sucker_factor))
     self.menu_looper.ReturnToTop()
 
   # this definitely doesn't belong here
-  def GetListPrices(self, buy_price, charisma_factor, sucker_factor):
+  def GetListPricesFromBuyPrice(self, buy_price, charisma_factor,
+                                sucker_factor):
     # sucker_factor is always 1.0 for now so ignore it
     # we have to get rid of charisma_factor
     list_price = int(buy_price / charisma_factor)
     prices = []
-    if self.potion_store.IsValidPrice(list_price):
-      prices.append(list_price)
-    shop_markup_price = int(list_price / 1.333)
-    if self.potion_store.IsValidPrice(shop_markup_price):
-      prices.append(shop_markup_price)
-    print 'List prices: '
-    print prices
-    return prices
+    for price in [list_price, list_price + 1]:
+      if self.potion_store.IsValidPrice(price):
+        prices.append(price)
+      shop_markup_price = int(price / 1.333)
+      for shop_price in [shop_markup_price, shop_markup_price + 1]:
+        if self.potion_store.IsValidPrice(shop_price):
+          prices.append(shop_price)
+    return set(prices)
 
 class ShowPotionInfoMenuItem(menu.MenuItem):
   def __init__(self, menu_looper, potion_store):

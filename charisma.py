@@ -14,7 +14,7 @@ class Charisma:
 
 
   def CharismaFactor(self):
-    if(self.charisma <= 6):
+    if(self.charisma < 6):
       return 2.0
     if(self.charisma == 6 or self.charisma == 7):
       return 1.5
