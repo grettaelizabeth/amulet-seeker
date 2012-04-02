@@ -418,16 +418,43 @@ class PotionStore():
     return self.price_bands.has_key(price)
 
 
+  def CollapsePriceBands(self):
+    change = True
+    while change == True:
+      change = False
+      for cost, potion_classes in self.price_bands.iteritems():
+        num_unidentified = 0
+        for potion_class in potion_classes:
+          if not potion_class.IsIdentified():
+            num_unidentified = num_unidentified + 1
+            canonical_potion_class = potion_class
+        # if there is only one unidentified potion in this price band,
+        # and we know an unidentified potion at that price, identify it
+        if num_unidentified == 1:
+          for potion_class in self.unidentified_potion_classes:
+            if potion_class.cost == cost:
+              self.Merge(canonical_potion_class, potion_class)
+              print 'By process of elimination, %s is %s!' % (
+                canonical_potion_class.unidentified_description,
+                canonical_potion_class.identified_description)
+        # if there are no unidentified potions in this price band,
+        # eliminate this price as a possible price for other potions
+        if num_unidentified == 0:
+          for potion_class in self.unidentified_potion_classes:
+            if type(potion_class.cost) == set and cost in potion_class.cost:
+              potion_class.cost.remove(cost)
+              print '%s can\'t cost %d' % (
+                potion_class.unidentified_description, cost)
+              change = True
+
+
   def AddPriceInformation(self, description, list_prices):
     unidentified_potion_class = self.FindUnidentified(description)
     if len(list_prices) == 1:
       unidentified_potion_class.cost = list_prices.pop()
-      # if there is only one unidentifed potion at this list price,
-      # identify it
+      self.CollapsePriceBands()
     else:
       unidentified_potion_class.cost = list_prices
-      # uh, not sure if the rest of the code can deal with a set of costs
-      # let's see what happens
 
 
   def PrintCanonicalPotions(self):
