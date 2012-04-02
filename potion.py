@@ -24,6 +24,9 @@ class PotionClass(objects.NethackObjectClass):
                                         unidentified_description,
                                         user_assigned_name, is_seen)
 
+  def IsIdentified(self):
+    return self.identified_description and self.unidentified_description
+
 
 ############################################################################
 # Canonical PotionClasses
@@ -261,9 +264,9 @@ class PotionClassFilter():
       return False
     if self.not_seen and potion_class.is_seen:
       return False
-    if self.is_identified and not potion_class.is_identified:
+    if self.is_identified and not potion_class.IsIdentified():
       return False
-    if self.not_identified and potion_class.is_identified:
+    if self.not_identified and potion_class.IsIdentified():
       return False
     return True
 
@@ -418,12 +421,12 @@ class PotionStore():
   def AddPriceInformation(self, description, list_prices):
     unidentified_potion_class = self.FindUnidentified(description)
     if len(list_prices) == 1:
-      unidentified_potion_class.cost = list_prices[0]
+      unidentified_potion_class.cost = list_prices.pop()
       # if there is only one unidentifed potion at this list price,
       # identify it
     else:
       unidentified_potion_class.cost = list_prices
-      # uh, not sure if the rest of the code can deal with a list of costs
+      # uh, not sure if the rest of the code can deal with a set of costs
       # let's see what happens
 
 
@@ -444,7 +447,11 @@ class PotionStore():
       is_seen = ''
       if potion_class.is_seen == True:
         is_seen = '(seen)'
-      print '  %s %s' % (potion_class.unidentified_description, is_seen)
+      cost = ''
+      if potion_class.cost != None:
+        cost = '(%d)' % potion_class.cost
+      print '  %s %s %s' % (potion_class.unidentified_description,
+                            is_seen, cost)
 
 
 ############################################################################
@@ -541,17 +548,15 @@ class IdentifyPotionMenuItem(menu.MenuItem):
     self.potion_store = potion_store
 
   def Handle(self):
-    null_filter = PotionClassFilter()
-    type_menu = GetUnidentifiedPotionTypeMenu(self.menu_looper,
-                                              self.potion_store,
-                                              null_filter)
+    potion_unidentified_filter = PotionClassFilter(not_identified=True)
+    type_menu = GetUnidentifiedPotionTypeMenu(
+      self.menu_looper, self.potion_store, potion_unidentified_filter)
     potion_type = type_menu.GetPlayerSelection()
     if potion_type == None:
       return
 
-    desc_menu = GetUnidentifiedPotionDescriptionMenu(self.menu_looper,
-                                                     self.potion_store,
-                                                     null_filter)
+    desc_menu = GetUnidentifiedPotionDescriptionMenu(
+      self.menu_looper, self.potion_store, potion_unidentified_filter)
     description = desc_menu.GetPlayerSelection()
     if description == None:
       return
@@ -585,7 +590,7 @@ class SellPotionMenuItem(menu.MenuItem):
     # need to validate y/n input here, and calculate sucker_factor
     sucker_factor = 1.0
 
-    potion_store.AddPriceInformation(
+    self.potion_store.AddPriceInformation(
       description, self.GetListPricesFromSalePrice(sale_price,
                                                    sucker_factor))
     self.menu_looper.ReturnToTop()
