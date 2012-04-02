@@ -24,8 +24,15 @@ class PotionClass(objects.NethackObjectClass):
                                         unidentified_description,
                                         user_assigned_name, is_seen)
 
+
   def IsIdentified(self):
-    return self.identified_description and self.unidentified_description
+    if self.identified_description and self.unidentified_description:
+      return True
+    return False
+
+
+  def See(self):
+    self.is_seen = True
 
 
 ############################################################################
@@ -379,6 +386,11 @@ class PotionStore():
     self.__init__()
 
 
+  def See(self, description):
+    potion_class = self.FindUnidentified(description)
+    potion_class.See()
+
+
   def FindUnidentified(self, description):
     for potion_class in self.unidentified_potion_classes:
       if potion_class.unidentified_description == description:
@@ -437,12 +449,15 @@ class PotionStore():
               print 'By process of elimination, %s is %s!' % (
                 canonical_potion_class.unidentified_description,
                 canonical_potion_class.identified_description)
+              change = True
         # if there are no unidentified potions in this price band,
         # eliminate this price as a possible price for other potions
         if num_unidentified == 0:
           for potion_class in self.unidentified_potion_classes:
             if type(potion_class.cost) == set and cost in potion_class.cost:
               potion_class.cost.remove(cost)
+              if len(potion_class.cost) == 1:
+                potion_class.cost = potion_class.cost.pop()
               print '%s can\'t cost %d' % (
                 potion_class.unidentified_description, cost)
               change = True
@@ -563,8 +578,7 @@ class SawPotionMenuItem(menu.MenuItem):
                                                      potion_unseen_filter)
     description = desc_menu.GetPlayerSelection()
     if description != None:
-      potion_class = self.potion_store.FindUnidentified(description)
-      potion_class.is_seen = True
+      self.potion_store.See(description)
     print
     self.menu_looper.ReturnToTop()
 
