@@ -424,6 +424,7 @@ class PotionStore():
       print 'That potion has already been identified.'
       return
     self.Merge(canonical_potion_class, unidentified_potion_class)
+    self.CollapsePriceBands()
 
 
   def IsValidPrice(self, price):
@@ -491,7 +492,10 @@ class PotionStore():
         is_seen = '(seen)'
       cost = ''
       if potion_class.cost != None:
-        cost = '(%d)' % potion_class.cost
+        if type(potion_class.cost) == set:
+          cost = '(ambiguous cost)'
+        else:
+          cost = '(%d)' % potion_class.cost
       print '  %s %s %s' % (potion_class.unidentified_description,
                             is_seen, cost)
 
@@ -671,7 +675,8 @@ class BuyPotionMenuItem(menu.MenuItem):
 
     buy_price = int(raw_input('What buy price was offered? '))
 
-    player_charisma = charisma.Charisma(raw_input('What is your charisma? '))
+    player_charisma = charisma.Charisma(
+      int(raw_input('What is your charisma? ')))
     charisma_factor = player_charisma.CharismaFactor()
 
     # tourist <= lvl 15, visible hawaiian shirt, visible tshirt
