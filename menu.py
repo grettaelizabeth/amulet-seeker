@@ -109,11 +109,17 @@ class Menu:
   def __init__(self):
     """Inits Menu with menu items."""
     self.menu_items = []
+    self.selection_prompt = 'What would you like to do? '
 
 
   def AddMenuItem(self, item):
     """Adds an item to the menu."""
     self.menu_items.append(item)
+
+
+  def SetSelectionPrompt(self, prompt):
+    """Overrides the default selection prompt."""
+    self.selection_prompt = prompt
 
 
   def Print(self):
@@ -139,7 +145,7 @@ class Menu:
   def GetPlayerSelection(self):
     """Prints the menu and finds out what the player wants to do."""
     self.Print()
-    selection = self.Validate(raw_input('What would you like to do? '))
+    selection = self.Validate(raw_input(self.selection_prompt))
     if selection == None:
       print 'That is not a valid selection.'
       print

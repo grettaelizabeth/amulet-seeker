@@ -529,11 +529,13 @@ class GetUnidentifiedPotionTypeMenuItem(menu.MenuItem):
 
 
 class GetUnidentifiedPotionTypeMenu(menu.DynamicMenu):
-  def __init__(self, menu_looper, potion_store, potion_class_filter):
+  def __init__(self, menu_looper, potion_store, potion_class_filter,
+               selection_prompt):
     menu.DynamicMenu.__init__(self)
     self.menu_looper = menu_looper
     self.potion_store = potion_store
     self.potion_class_filter = potion_class_filter
+    self.SetSelectionPrompt(selection_prompt)
 
   def SetMenuItems(self):
     for potion_class in self.potion_store.canonical_potion_classes:
@@ -554,11 +556,13 @@ class GetUnidentifiedPotionDescriptionMenuItem(menu.MenuItem):
 
 
 class GetUnidentifiedPotionDescriptionMenu(menu.DynamicMenu):
-  def __init__(self, menu_looper, potion_store, potion_class_filter):
+  def __init__(self, menu_looper, potion_store, potion_class_filter,
+               selection_prompt):
     menu.DynamicMenu.__init__(self)
     self.menu_looper = menu_looper
     self.potion_store = potion_store
     self.potion_class_filter = potion_class_filter
+    self.SetSelectionPrompt(selection_prompt)
 
   def SetMenuItems(self):
     for potion_class in self.potion_store.unidentified_potion_classes:
@@ -578,8 +582,8 @@ class SawPotionMenuItem(menu.MenuItem):
   def Handle(self):
     potion_unseen_filter = PotionClassFilter(not_seen=True)
     desc_menu = GetUnidentifiedPotionDescriptionMenu(self.menu_looper,
-                                                     self.potion_store,
-                                                     potion_unseen_filter)
+      self.potion_store, potion_unseen_filter,
+      'What color potion did you see? ')
     description = desc_menu.GetPlayerSelection()
     if description != None:
       self.potion_store.See(description)
@@ -595,13 +599,15 @@ class IdentifyPotionMenuItem(menu.MenuItem):
   def Handle(self):
     potion_unidentified_filter = PotionClassFilter(not_identified=True)
     type_menu = GetUnidentifiedPotionTypeMenu(
-      self.menu_looper, self.potion_store, potion_unidentified_filter)
+      self.menu_looper, self.potion_store, potion_unidentified_filter,
+      'What type of potion did you identify? ')
     potion_type = type_menu.GetPlayerSelection()
     if potion_type == None:
       return
 
     desc_menu = GetUnidentifiedPotionDescriptionMenu(
-      self.menu_looper, self.potion_store, potion_unidentified_filter)
+      self.menu_looper, self.potion_store, potion_unidentified_filter,
+      'What color potion was it? ')
     description = desc_menu.GetPlayerSelection()
     if description == None:
       return
@@ -619,8 +625,8 @@ class SellPotionMenuItem(menu.MenuItem):
   def Handle(self):
     seen_filter = PotionClassFilter(is_seen=True)
     desc_menu = GetUnidentifiedPotionDescriptionMenu(self.menu_looper,
-                                                     self.potion_store,
-                                                     seen_filter)
+      self.potion_store, seen_filter,
+      'What color potion did you put up for sale? ')
     description = desc_menu.GetPlayerSelection()
     if description == None:
       return
@@ -663,8 +669,8 @@ class BuyPotionMenuItem(menu.MenuItem):
   def Handle(self):
     null_filter = PotionClassFilter()
     desc_menu = GetUnidentifiedPotionDescriptionMenu(self.menu_looper,
-                                                     self.potion_store,
-                                                     null_filter)
+      self.potion_store, null_filter,
+      'What color potion did you offer to buy? ')
     description = desc_menu.GetPlayerSelection()
     if description == None:
       return
