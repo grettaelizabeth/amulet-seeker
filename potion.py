@@ -617,6 +617,7 @@ class IdentifyPotionMenuItem(menu.MenuItem):
     self.menu_looper.ReturnToTop()
 
 
+# Player is selling something to a shopkeeper
 class SellPotionMenuItem(menu.MenuItem):
   def __init__(self, menu_looper, potion_store):
     menu.MenuItem.__init__(self, 'Put a potion up for sale', menu_looper)
@@ -637,18 +638,13 @@ class SellPotionMenuItem(menu.MenuItem):
 
     sale_price = int(raw_input('What sale price was offered? '))
 
-    # tourist <= lvl 15, visible hawaiian shirt, visible tshirt
-    # need to validate y/n input here, and calculate sucker_factor
-    sucker_factor = 1.0
-
     self.potion_store.AddPriceInformation(
-      description, self.GetListPricesFromSalePrice(sale_price,
-                                                   sucker_factor))
+      description, self.GetListPricesFromSalePrice(sale_price,))
+
     self.menu_looper.ReturnToTop()
 
   # this definitely doesn't belong here
-  def GetListPricesFromSalePrice(self, sale_price, sucker_factor):
-    # sucker_factor is always 1.0 for now so ignore it
+  def GetListPricesFromSalePrice(self, sale_price):
     prices = []
     list_price = int(2.0 * sale_price)
     for price in [list_price, list_price - 1]:
@@ -661,10 +657,24 @@ class SellPotionMenuItem(menu.MenuItem):
     return set(prices)
 
 
+# Player is buying something from a shopkeeper
 class BuyPotionMenuItem(menu.MenuItem):
   def __init__(self, menu_looper, potion_store):
     menu.MenuItem.__init__(self, 'Buy a potion', menu_looper)
     self.potion_store = potion_store
+
+  # this definitely doesn't belong here
+  # input needs to be validated better, should create y/n question function
+  def GetSuckerFactor(self):
+    sucker_factor = 1.0
+    if ((raw_input(
+           'Are you a tourist of level 15 or less? (y/n) ') == 'y') or
+        (raw_input(
+           'Are you wearing a visible Hawaiian shirt? (y/n) ') == 'y') or
+        (raw_input(
+           'Are you wearing a visible T-Shirt? (y/n) ') == 'y')):
+      sucker_factor = 1.33
+    return sucker_factor
 
   def Handle(self):
     null_filter = PotionClassFilter()
@@ -685,9 +695,7 @@ class BuyPotionMenuItem(menu.MenuItem):
       int(raw_input('What is your charisma? ')))
     charisma_factor = player_charisma.CharismaFactor()
 
-    # tourist <= lvl 15, visible hawaiian shirt, visible tshirt
-    # need to validate y/n input here, and calculate sucker_factor
-    sucker_factor = 1.0
+    sucker_factor = self.GetSuckerFactor()
 
     self.potion_store.AddPriceInformation(
       description, self.GetListPricesFromBuyPrice(buy_price,
@@ -698,9 +706,7 @@ class BuyPotionMenuItem(menu.MenuItem):
   # this definitely doesn't belong here
   def GetListPricesFromBuyPrice(self, buy_price, charisma_factor,
                                 sucker_factor):
-    # sucker_factor is always 1.0 for now so ignore it
-    # we have to get rid of charisma_factor
-    list_price = int(buy_price / charisma_factor)
+    list_price = int(buy_price / (charisma_factor * sucker_factor))
     prices = []
     for price in [list_price, list_price + 1]:
       if self.potion_store.IsValidPrice(price):

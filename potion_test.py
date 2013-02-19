@@ -23,27 +23,21 @@ def TestPotionStore(potion_store):
 
 
 def TestGetListPricesFromSalePrice(sell_potion_menu_item):
-  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(
-          19, 1.0), set([50]))
-  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(
-          25, 1.0), set([50]))
-  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(
-          38, 1.0), set([100]))
-  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(
-          57, 1.0), set([150]))
-  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(
-          75, 1.0), set([150, 200]))
-  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(
-          94, 1.0), set([250]))
-  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(
-          100, 1.0), set([200]))
-  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(
-          113, 1.0), set([300]))
-  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(
-          125, 1.0), set([250]))
-  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(
-          150, 1.0), set([300]))
-
+  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(19), set([50]))
+  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(25), set([50]))
+  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(38), set([100]))
+  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(57), set([150]))
+  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(75),
+              set([150, 200]))
+  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(94), set([250]))
+  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(100),
+              set([200]))
+  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(113),
+              set([300]))
+  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(125),
+              set([250]))
+  ExpectEqual(sell_potion_menu_item.GetListPricesFromSalePrice(150),
+              set([300]))
 
 def TestGetListPricesFromBuyPrice(buy_potion_menu_item):
   ExpectEqual(buy_potion_menu_item.GetListPricesFromBuyPrice(
@@ -75,6 +69,12 @@ def TestGetListPricesFromBuyPrice(buy_potion_menu_item):
   ExpectEqual(buy_potion_menu_item.GetListPricesFromBuyPrice(
           100, charisma.Charisma(19).CharismaFactor(), 1.0), set([150, 200]))
 
+def TestGetListPricesFromBuyPriceWithSuckerFactor(buy_potion_menu_item):
+  ExpectEqual(buy_potion_menu_item.GetListPricesFromBuyPrice(
+          177, charisma.Charisma(11).CharismaFactor(), 1.33), set([100]))
+  ExpectEqual(buy_potion_menu_item.GetListPricesFromBuyPrice(
+          266, charisma.Charisma(11).CharismaFactor(), 1.33), set([150, 200]))
+  
 def TestIdentifyPotionByElimination(potion_store):
   potion_store.Identify('booze', 'ruby')
   potion_store.Identify('fruit juice', 'pink')
@@ -127,6 +127,7 @@ def main():
   TestPotionStore(potion_store)
   TestGetListPricesFromSalePrice(sell_potion_menu_item)
   TestGetListPricesFromBuyPrice(buy_potion_menu_item)
+  TestGetListPricesFromBuyPriceWithSuckerFactor(buy_potion_menu_item)
   TestIdentifyPotionByElimination(potion_store)
 
   potion_store_2 = potion.PotionStore()
