@@ -468,9 +468,13 @@ class PotionStore():
     unidentified_potion_class = self.FindUnidentified(description)
     if len(list_prices) == 1:
       unidentified_potion_class.cost = list_prices.pop()
+      print "The %s potion's list price is %d" % (
+        description, unidentified_potion_class.cost)
       self.CollapsePriceBands()
     else:
       unidentified_potion_class.cost = list_prices
+      print "The %s potion's list price is one of %s" % (
+        description, unidentified_potion_class.cost)
 
 
   def PrintCanonicalPotions(self):
