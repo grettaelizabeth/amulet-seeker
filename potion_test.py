@@ -6,6 +6,7 @@ __author__ = 'gretta@gmail.com (Gretta Bartels)'
 
 import charisma
 import menu
+import object_knowledge_repository
 import potion
 
 def ExpectEqual(a, b):
@@ -14,12 +15,12 @@ def ExpectEqual(a, b):
     print a
     print b
 
-def TestPotionStore(potion_store):
-  ExpectEqual(potion_store.IsValidPrice(50), True)
-  ExpectEqual(potion_store.IsValidPrice(150), True)
-  ExpectEqual(potion_store.IsValidPrice(300), True)
-  ExpectEqual(potion_store.IsValidPrice(40), False)
-  ExpectEqual(potion_store.IsValidPrice('frog'), False)
+def TestPotionStore(kr):
+  ExpectEqual(kr.IsValidPrice('potion', 50), True)
+  ExpectEqual(kr.IsValidPrice('potion', 150), True)
+  ExpectEqual(kr.IsValidPrice('potion', 300), True)
+  ExpectEqual(kr.IsValidPrice('potion', 40), False)
+  ExpectEqual(kr.IsValidPrice('potion', 'frog'), False)
 
 
 def TestGetListPricesFromSalePrice(sell_potion_menu_item):
@@ -75,40 +76,40 @@ def TestGetListPricesFromBuyPriceWithSuckerFactor(buy_potion_menu_item):
   ExpectEqual(buy_potion_menu_item.GetListPricesFromBuyPrice(
           266, charisma.Charisma(11).CharismaFactor(), 1.33), set([150, 200]))
   
-def TestIdentifyPotionByElimination(potion_store):
-  potion_store.Identify('booze', 'ruby')
-  potion_store.Identify('fruit juice', 'pink')
-  potion_store.Identify('see invisible', 'orange')
-  potion_store.See('yellow')
-  potion_store.AddPriceInformation('yellow', set([50]))
-  sickness_potion = potion_store.FindCanonical('sickness')
+def TestIdentifyPotionByElimination(kr):
+  kr.Identify('potion', 'booze', 'ruby')
+  kr.Identify('potion', 'fruit juice', 'pink')
+  kr.Identify('potion', 'see invisible', 'orange')
+  kr.See('potion', 'yellow')
+  kr.AddPriceInformation('potion', 'yellow', set([50]))
+  sickness_potion = kr.FindCanonical('potion', 'sickness')
   ExpectEqual(sickness_potion.unidentified_description, 'yellow')
 
 
-def TestCascadingIdentifyPotionByElimination(potion_store):
+def TestCascadingIdentifyPotionByElimination(kr):
   # 4/5 potions at 150 are known - all but object detection
-  potion_store.Identify('blindness', 'ruby')
-  potion_store.Identify('gain energy', 'pink')
-  potion_store.Identify('invisibility', 'orange')
-  potion_store.Identify('monster detection', 'yellow')
+  kr.Identify('potion', 'blindness', 'ruby')
+  kr.Identify('potion', 'gain energy', 'pink')
+  kr.Identify('potion', 'invisibility', 'orange')
+  kr.Identify('potion', 'monster detection', 'yellow')
 
   # 4/5 potions at 200 are known - all but speed
-  potion_store.Identify('enlightenment', 'emerald')
-  potion_store.Identify('full healing', 'dark green')
-  potion_store.Identify('levitation', 'cyan')
-  potion_store.Identify('polymorph', 'sky blue')
+  kr.Identify('potion', 'enlightenment', 'emerald')
+  kr.Identify('potion', 'full healing', 'dark green')
+  kr.Identify('potion', 'levitation', 'cyan')
+  kr.Identify('potion', 'polymorph', 'sky blue')
 
   # one potion is either 150 or 200
-  potion_store.AddPriceInformation('brilliant blue', set([150, 200]))
+  kr.AddPriceInformation('potion', 'brilliant blue', set([150, 200]))
 
   # nothing should happen here
-  object_detection_potion = potion_store.FindCanonical('object detection')
-  speed_potion = potion_store.FindCanonical('speed')
+  object_detection_potion = kr.FindCanonical('potion', 'object detection')
+  speed_potion = kr.FindCanonical('potion', 'speed')
   ExpectEqual(object_detection_potion.IsIdentified(), False)
   ExpectEqual(speed_potion.IsIdentified(), False)
 
   # now we find a potion at 150
-  potion_store.AddPriceInformation('magenta', set([150]))
+  kr.AddPriceInformation('potion', 'magenta', set([150]))
 
   # we should have seen magenta get matched to object detection and
   # brilliant blue get matched to speed - let's verify
@@ -119,19 +120,22 @@ def TestCascadingIdentifyPotionByElimination(potion_store):
 
 
 def main():
-  potion_store = potion.PotionStore()
-  menu_looper = menu.MenuLooper()
-  sell_potion_menu_item = potion.SellPotionMenuItem(menu_looper, potion_store)
-  buy_potion_menu_item = potion.BuyPotionMenuItem(menu_looper, potion_store)
+  kr = object_knowledge_repository.ObjectKnowledgeRepository()
+  potion.SetUpPotionClasses(kr)
 
-  TestPotionStore(potion_store)
+  menu_looper = menu.MenuLooper()
+  sell_potion_menu_item = potion.SellPotionMenuItem(menu_looper, kr)
+  buy_potion_menu_item = potion.BuyPotionMenuItem(menu_looper, kr)
+
+  TestPotionStore(kr)
   TestGetListPricesFromSalePrice(sell_potion_menu_item)
   TestGetListPricesFromBuyPrice(buy_potion_menu_item)
   TestGetListPricesFromBuyPriceWithSuckerFactor(buy_potion_menu_item)
-  TestIdentifyPotionByElimination(potion_store)
+  TestIdentifyPotionByElimination(kr)
 
-  potion_store_2 = potion.PotionStore()
-  TestCascadingIdentifyPotionByElimination(potion_store_2)
+  kr_2 = object_knowledge_repository.ObjectKnowledgeRepository()
+  potion.SetUpPotionClasses(kr_2)
+  TestCascadingIdentifyPotionByElimination(kr_2)
 
 if __name__ == '__main__':
   main()

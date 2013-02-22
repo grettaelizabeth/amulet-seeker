@@ -1,13 +1,12 @@
 #!/usr/bin/python
-"""A system for keeping track of nethack potions.
-"""
+"""A system for keeping track of nethack potions."""
 
 __author__ = 'gretta@gmail.com (Gretta Bartels)'
 
 import charisma
 import menu
+import object_knowledge_repository
 import objects
-import pickle
 
 
 ############################################################################
@@ -279,232 +278,6 @@ class PotionClassFilter():
 
 
 ############################################################################
-# PotionStore
-############################################################################
-
-
-class PotionStore():
-  def __init__(self):
-    self.version = 2
-    self.canonical_potion_classes = [
-      BoozePotionClass(),
-      FruitJuicePotionClass(),
-      SeeInvisiblePotionClass(),
-      SicknessPotionClass(),
-      ConfusionPotionClass(),
-      ExtraHealingPotionClass(),
-      HallucinationPotionClass(),
-      HealingPotionClass(),
-      RestoreAbilityPotionClass(),
-      SleepingPotionClass(),
-      WaterPotionClass(),
-      BlindnessPotionClass(),
-      GainEnergyPotionClass(),
-      InvisibilityPotionClass(),
-      MonsterDetectionPotionClass(),
-      ObjectDetectionPotionClass(),
-      EnlightenmentPotionClass(),
-      FullHealingPotionClass(),
-      LevitationPotionClass(),
-      PolymorphPotionClass(),
-      SpeedPotionClass(),
-      AcidPotionClass(),
-      OilPotionClass(),
-      GainAbilityPotionClass(),
-      GainLevelPotionClass(),
-      ParalysisPotionClass(),
-    ]
-
-    self.unidentified_potion_classes = [
-      RubyPotionClass(),
-      PinkPotionClass(),
-      OrangePotionClass(),
-      YellowPotionClass(),
-      EmeraldPotionClass(),
-      DarkGreenPotionClass(),
-      CyanPotionClass(),
-      SkyBluePotionClass(),
-      BrilliantBluePotionClass(),
-      MagentaPotionClass(),
-      PurpleRedPotionClass(),
-      PucePotionClass(),
-      MilkyPotionClass(),
-      SwirlyPotionClass(),
-      BubblyPotionClass(),
-      SmokyPotionClass(),
-      CloudyPotionClass(),
-      EffervescentPotionClass(),
-      BlackPotionClass(),
-      GoldenPotionClass(),
-      BrownPotionClass(),
-      FizzyPotionClass(),
-      DarkPotionClass(),
-      WhitePotionClass(),
-      MurkyPotionClass()
-    ]
-
-    self.price_bands = { }
-    self.InitPriceBands()
-
-  def InitPriceBands(self):
-    for potion_class in self.canonical_potion_classes:
-      try:
-        self.price_bands[potion_class.cost].append(potion_class)
-      except KeyError:
-        self.price_bands[potion_class.cost] = [potion_class]
-
-  def SaveToFile(self, filename):
-    output_file = open(filename, 'wb')
-    pickle.dump(self.version, output_file)
-    pickle.dump(self.canonical_potion_classes, output_file)
-    pickle.dump(self.unidentified_potion_classes, output_file)
-    pickle.dump(self.price_bands, output_file)
-    output_file.close()
-
-
-  def LoadFromFile(self, filename):
-    input_file = open(filename, 'rb')
-    try:
-      version = pickle.load(input_file)
-    except:
-      print "Can't read this file!"
-      return
-    if version != self.version:
-      print "File version does not match!  Can't load this file."
-      return
-    try:
-      self.canonical_potion_classes = pickle.load(input_file)
-      self.unidentified_potion_classes = pickle.load(input_file)
-      self.price_bands = pickle.load(input_file)
-      return
-    except:
-      print "Can't read this file!"
-    input_file.close()
-
-
-  def ClearState(self):
-    self.__init__()
-
-
-  def See(self, description):
-    potion_class = self.FindUnidentified(description)
-    potion_class.See()
-
-
-  def FindUnidentified(self, description):
-    for potion_class in self.unidentified_potion_classes:
-      if potion_class.unidentified_description == description:
-        return potion_class
-    return None
-
-
-  def FindCanonical(self, description):
-    for potion_class in self.canonical_potion_classes:
-      if potion_class.identified_description == description:
-        return potion_class
-    return None
-
-
-  def Merge(self, canonical_potion_class, unidentified_potion_class):
-    canonical_potion_class.unidentified_description = \
-      unidentified_potion_class.unidentified_description
-    canonical_potion_class.user_assigned_name = \
-      unidentified_potion_class.user_assigned_name
-    canonical_potion_class.is_seen = True
-    self.unidentified_potion_classes.remove(unidentified_potion_class)
-
-  
-  def Identify(self, potion_type, description):
-    canonical_potion_class = self.FindCanonical(potion_type)
-    if canonical_potion_class == None:
-      print 'That potion type does not exist.'
-      return
-    unidentified_potion_class = self.FindUnidentified(description)
-    if unidentified_potion_class == None:
-      print 'That potion has already been identified.'
-      return
-    self.Merge(canonical_potion_class, unidentified_potion_class)
-    self.CollapsePriceBands()
-
-
-  def IsValidPrice(self, price):
-    return self.price_bands.has_key(price)
-
-
-  def CollapsePriceBands(self):
-    change = True
-    while change == True:
-      change = False
-      for cost, potion_classes in self.price_bands.iteritems():
-        num_unidentified = 0
-        for potion_class in potion_classes:
-          if not potion_class.IsIdentified():
-            num_unidentified = num_unidentified + 1
-            canonical_potion_class = potion_class
-        # if there is only one unidentified potion in this price band,
-        # and we know an unidentified potion at that price, identify it
-        if num_unidentified == 1:
-          for potion_class in self.unidentified_potion_classes:
-            if potion_class.cost == cost:
-              self.Merge(canonical_potion_class, potion_class)
-              print 'By process of elimination, %s is %s!' % (
-                canonical_potion_class.unidentified_description,
-                canonical_potion_class.identified_description)
-              change = True
-        # if there are no unidentified potions in this price band,
-        # eliminate this price as a possible price for other potions
-        if num_unidentified == 0:
-          for potion_class in self.unidentified_potion_classes:
-            if type(potion_class.cost) == set and cost in potion_class.cost:
-              potion_class.cost.remove(cost)
-              if len(potion_class.cost) == 1:
-                potion_class.cost = potion_class.cost.pop()
-              print '%s can\'t cost %d' % (
-                potion_class.unidentified_description, cost)
-              change = True
-
-
-  def AddPriceInformation(self, description, list_prices):
-    unidentified_potion_class = self.FindUnidentified(description)
-    if len(list_prices) == 1:
-      unidentified_potion_class.cost = list_prices.pop()
-      print "The %s potion's list price is %d" % (
-        description, unidentified_potion_class.cost)
-      self.CollapsePriceBands()
-    else:
-      unidentified_potion_class.cost = list_prices
-      print "The %s potion's list price is one of %s" % (
-        description, unidentified_potion_class.cost)
-
-
-  def PrintCanonicalPotions(self):
-    print 'Canonical potions:'
-    for cost, potion_classes in sorted(self.price_bands.iteritems()):
-      print '  %d' % cost
-      for potion_class in potion_classes:
-        unidentified_description = potion_class.unidentified_description
-        if unidentified_description == None:
-          unidentified_description = '?'
-        print '    %s - %s' % (potion_class.identified_description,
-                             unidentified_description)
-
-  def PrintUnidentifiedPotions(self):
-    print 'Unidentified potions:'
-    for potion_class in self.unidentified_potion_classes:
-      is_seen = ''
-      if potion_class.is_seen == True:
-        is_seen = '(seen)'
-      cost = ''
-      if potion_class.cost != None:
-        if type(potion_class.cost) == set:
-          cost = '(ambiguous cost)'
-        else:
-          cost = '(%d)' % potion_class.cost
-      print '  %s %s %s' % (potion_class.unidentified_description,
-                            is_seen, cost)
-
-
-############################################################################
 # Potion
 ############################################################################
 
@@ -533,16 +306,16 @@ class GetUnidentifiedPotionTypeMenuItem(menu.MenuItem):
 
 
 class GetUnidentifiedPotionTypeMenu(menu.DynamicMenu):
-  def __init__(self, menu_looper, potion_store, potion_class_filter,
+  def __init__(self, menu_looper, kr, potion_class_filter,
                selection_prompt):
     menu.DynamicMenu.__init__(self)
     self.menu_looper = menu_looper
-    self.potion_store = potion_store
+    self.kr = kr
     self.potion_class_filter = potion_class_filter
     self.SetSelectionPrompt(selection_prompt)
 
   def SetMenuItems(self):
-    for potion_class in self.potion_store.canonical_potion_classes:
+    for potion_class in self.kr.canonical_classes['potion']:
       if self.potion_class_filter.Passes(potion_class):
         self.AddMenuItem(
           GetUnidentifiedPotionTypeMenuItem(
@@ -560,16 +333,16 @@ class GetUnidentifiedPotionDescriptionMenuItem(menu.MenuItem):
 
 
 class GetUnidentifiedPotionDescriptionMenu(menu.DynamicMenu):
-  def __init__(self, menu_looper, potion_store, potion_class_filter,
+  def __init__(self, menu_looper, kr, potion_class_filter,
                selection_prompt):
     menu.DynamicMenu.__init__(self)
     self.menu_looper = menu_looper
-    self.potion_store = potion_store
+    self.kr = kr
     self.potion_class_filter = potion_class_filter
     self.SetSelectionPrompt(selection_prompt)
 
   def SetMenuItems(self):
-    for potion_class in self.potion_store.unidentified_potion_classes:
+    for potion_class in self.kr.unidentified_classes['potion']:
       if self.potion_class_filter.Passes(potion_class):
         self.AddMenuItem(
           GetUnidentifiedPotionDescriptionMenuItem(
@@ -578,59 +351,59 @@ class GetUnidentifiedPotionDescriptionMenu(menu.DynamicMenu):
 
 
 class SawPotionMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, potion_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'See a potion', menu_looper)
-    self.potion_store = potion_store
+    self.kr = kr
 
 
   def Handle(self):
     potion_unseen_filter = PotionClassFilter(not_seen=True)
     desc_menu = GetUnidentifiedPotionDescriptionMenu(self.menu_looper,
-      self.potion_store, potion_unseen_filter,
+      self.kr, potion_unseen_filter,
       'What color potion did you see? ')
     description = desc_menu.GetPlayerSelection()
     if description != None:
-      self.potion_store.See(description)
+      self.kr.See('potion', description)
     print
     self.menu_looper.ReturnToTop()
 
 
 class IdentifyPotionMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, potion_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'Identify a potion', menu_looper)
-    self.potion_store = potion_store
+    self.kr = kr
 
   def Handle(self):
     potion_unidentified_filter = PotionClassFilter(not_identified=True)
     type_menu = GetUnidentifiedPotionTypeMenu(
-      self.menu_looper, self.potion_store, potion_unidentified_filter,
+      self.menu_looper, self.kr, potion_unidentified_filter,
       'What type of potion did you identify? ')
     potion_type = type_menu.GetPlayerSelection()
     if potion_type == None:
       return
 
     desc_menu = GetUnidentifiedPotionDescriptionMenu(
-      self.menu_looper, self.potion_store, potion_unidentified_filter,
+      self.menu_looper, self.kr, potion_unidentified_filter,
       'What color potion was it? ')
     description = desc_menu.GetPlayerSelection()
     if description == None:
       return
 
-    self.potion_store.Identify(potion_type, description)
+    self.kr.Identify('potion', potion_type, description)
     print
     self.menu_looper.ReturnToTop()
 
 
 # Player is selling something to a shopkeeper
 class SellPotionMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, potion_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'Put a potion up for sale', menu_looper)
-    self.potion_store = potion_store
+    self.kr = kr
 
   def Handle(self):
     seen_filter = PotionClassFilter(is_seen=True)
     desc_menu = GetUnidentifiedPotionDescriptionMenu(self.menu_looper,
-      self.potion_store, seen_filter,
+      self.kr, seen_filter,
       'What color potion did you put up for sale? ')
     description = desc_menu.GetPlayerSelection()
     if description == None:
@@ -642,8 +415,8 @@ class SellPotionMenuItem(menu.MenuItem):
 
     sale_price = int(raw_input('What sale price was offered? '))
 
-    self.potion_store.AddPriceInformation(
-      description, self.GetListPricesFromSalePrice(sale_price,))
+    self.kr.AddPriceInformation('potion', description,
+                                self.GetListPricesFromSalePrice(sale_price))
 
     self.menu_looper.ReturnToTop()
 
@@ -652,20 +425,20 @@ class SellPotionMenuItem(menu.MenuItem):
     prices = []
     list_price = int(2.0 * sale_price)
     for price in [list_price, list_price - 1]:
-      if self.potion_store.IsValidPrice(price):
+      if self.kr.IsValidPrice('potion', price):
         prices.append(price)
       shop_markup_price = int(price * 1.334)
       for shop_price in [shop_markup_price, shop_markup_price - 1]:
-        if self.potion_store.IsValidPrice(shop_price):
+        if self.kr.IsValidPrice('potion', shop_price):
           prices.append(shop_price)
     return set(prices)
 
 
 # Player is buying something from a shopkeeper
 class BuyPotionMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, potion_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'Buy a potion', menu_looper)
-    self.potion_store = potion_store
+    self.kr = kr
 
   # this definitely doesn't belong here
   # input needs to be validated better, should create y/n question function
@@ -683,7 +456,7 @@ class BuyPotionMenuItem(menu.MenuItem):
   def Handle(self):
     null_filter = PotionClassFilter()
     desc_menu = GetUnidentifiedPotionDescriptionMenu(self.menu_looper,
-      self.potion_store, null_filter,
+      self.kr, null_filter,
       'What color potion did you offer to buy? ')
     description = desc_menu.GetPlayerSelection()
     if description == None:
@@ -701,10 +474,10 @@ class BuyPotionMenuItem(menu.MenuItem):
 
     sucker_factor = self.GetSuckerFactor()
 
-    self.potion_store.AddPriceInformation(
-      description, self.GetListPricesFromBuyPrice(buy_price,
-                                                  charisma_factor,
-                                                  sucker_factor))
+    self.kr.AddPriceInformation('potion', description,
+                                self.GetListPricesFromBuyPrice(buy_price,
+                                                               charisma_factor,
+                                                               sucker_factor))
     self.menu_looper.ReturnToTop()
 
   # this definitely doesn't belong here
@@ -713,59 +486,48 @@ class BuyPotionMenuItem(menu.MenuItem):
     list_price = int(buy_price / (charisma_factor * sucker_factor))
     prices = []
     for price in [list_price, list_price + 1]:
-      if self.potion_store.IsValidPrice(price):
+      if self.kr.IsValidPrice('potion', price):
         prices.append(price)
       shop_markup_price = int(price / 1.333)
       for shop_price in [shop_markup_price, shop_markup_price + 1]:
-        if self.potion_store.IsValidPrice(shop_price):
+        if self.kr.IsValidPrice('potion', shop_price):
           prices.append(shop_price)
     return set(prices)
 
 class ShowPotionInfoMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, potion_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'Show all potion information', menu_looper)
-    self.potion_store = potion_store
+    self.kr = kr
 
   def Handle(self):
-    self.potion_store.PrintCanonicalPotions()
-    self.potion_store.PrintUnidentifiedPotions()
+    self.kr.PrintCanonicalObjects('potion')
+    self.kr.PrintUnidentifiedObjects('potion')
     print
     self.menu_looper.ReturnToTop()
 
 
 class SaveToFileMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, potion_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'Save state to file', menu_looper)
-    self.potion_store = potion_store
+    self.kr = kr
 
   def Handle(self):
     filename = raw_input('File to save to: ')
-    self.potion_store.SaveToFile(filename)
+    self.kr.SaveToFile(filename)
     print
     self.menu_looper.ReturnToTop()
 
 
 class LoadFromFileMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, potion_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self,
                            'Load state from file (current state will be lost!)',
                            menu_looper)
-    self.potion_store = potion_store
+    self.kr = kr
 
   def Handle(self):
     filename = raw_input('File to load from: ')
-    self.potion_store.LoadFromFile(filename)
-    print
-    self.menu_looper.ReturnToTop()
-
-
-class ClearStateMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, potion_store):
-    menu.MenuItem.__init__(self, 'Clear all known state', menu_looper)
-    self.potion_store = potion_store
-
-  def Handle(self):
-    self.potion_store.ClearState()
+    self.kr.LoadFromFile(filename)
     print
     self.menu_looper.ReturnToTop()
 
@@ -774,26 +536,85 @@ class ClearStateMenuItem(menu.MenuItem):
 # main
 ############################################################################
 
+def SetUpPotionClasses(kr):
+  canonical_potion_classes = [
+    BoozePotionClass(),
+    FruitJuicePotionClass(),
+    SeeInvisiblePotionClass(),
+    SicknessPotionClass(),
+    ConfusionPotionClass(),
+    ExtraHealingPotionClass(),
+    HallucinationPotionClass(),
+    HealingPotionClass(),
+    RestoreAbilityPotionClass(),
+    SleepingPotionClass(),
+    WaterPotionClass(),
+    BlindnessPotionClass(),
+    GainEnergyPotionClass(),
+    InvisibilityPotionClass(),
+    MonsterDetectionPotionClass(),
+    ObjectDetectionPotionClass(),
+    EnlightenmentPotionClass(),
+    FullHealingPotionClass(),
+    LevitationPotionClass(),
+    PolymorphPotionClass(),
+    SpeedPotionClass(),
+    AcidPotionClass(),
+    OilPotionClass(),
+    GainAbilityPotionClass(),
+    GainLevelPotionClass(),
+    ParalysisPotionClass(),
+  ]
+  unidentified_potion_classes = [
+    RubyPotionClass(),
+    PinkPotionClass(),
+    OrangePotionClass(),
+    YellowPotionClass(),
+    EmeraldPotionClass(),
+    DarkGreenPotionClass(),
+    CyanPotionClass(),
+    SkyBluePotionClass(),
+    BrilliantBluePotionClass(),
+    MagentaPotionClass(),
+    PurpleRedPotionClass(),
+    PucePotionClass(),
+    MilkyPotionClass(),
+    SwirlyPotionClass(),
+    BubblyPotionClass(),
+    SmokyPotionClass(),
+    CloudyPotionClass(),
+    EffervescentPotionClass(),
+    BlackPotionClass(),
+    GoldenPotionClass(),
+    BrownPotionClass(),
+    FizzyPotionClass(),
+    DarkPotionClass(),
+    WhitePotionClass(),
+    MurkyPotionClass()
+  ]
+  kr.SetClasses('potion', canonical_potion_classes,
+                unidentified_potion_classes)
+
 
 def main():
-  potion_store = PotionStore()
+  kr = object_knowledge_repository.ObjectKnowledgeRepository()
+  SetUpPotionClasses(kr)
 
   menu_looper = menu.MenuLooper()
 
   potion_menu = menu.Menu()
-  potion_menu.AddMenuItem(SawPotionMenuItem(menu_looper, potion_store))
-  potion_menu.AddMenuItem(IdentifyPotionMenuItem(menu_looper, potion_store))
-  potion_menu.AddMenuItem(SellPotionMenuItem(menu_looper, potion_store))
-  potion_menu.AddMenuItem(BuyPotionMenuItem(menu_looper, potion_store))
-  potion_menu.AddMenuItem(ShowPotionInfoMenuItem(menu_looper, potion_store))
+  potion_menu.AddMenuItem(SawPotionMenuItem(menu_looper, kr))
+  potion_menu.AddMenuItem(IdentifyPotionMenuItem(menu_looper, kr))
+  potion_menu.AddMenuItem(SellPotionMenuItem(menu_looper, kr))
+  potion_menu.AddMenuItem(BuyPotionMenuItem(menu_looper, kr))
+  potion_menu.AddMenuItem(ShowPotionInfoMenuItem(menu_looper, kr))
   potion_menu.AddMenuItem(menu.ReturnToTopMenuItem(menu_looper))
 
   main_menu = menu.Menu()
   main_menu.AddMenuItem(menu.SubMenuMenuItem('Work on identifying potions',
                                              menu_looper, potion_menu))
-  main_menu.AddMenuItem(SaveToFileMenuItem(menu_looper, potion_store))
-  main_menu.AddMenuItem(LoadFromFileMenuItem(menu_looper, potion_store))
-  main_menu.AddMenuItem(ClearStateMenuItem(menu_looper, potion_store))
+  main_menu.AddMenuItem(SaveToFileMenuItem(menu_looper, kr))
+  main_menu.AddMenuItem(LoadFromFileMenuItem(menu_looper, kr))
   main_menu.AddMenuItem(menu.QuitMenuItem(menu_looper))
 
   menu_looper.SetTopMenu(main_menu)
