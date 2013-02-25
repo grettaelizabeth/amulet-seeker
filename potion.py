@@ -362,7 +362,7 @@ class SawPotionMenuItem(menu.MenuItem):
       self.kr, potion_unseen_filter,
       'What color potion did you see? ')
     description = desc_menu.GetPlayerSelection()
-    if description != None:
+    if description != False:
       self.kr.See('potion', description)
     print
     self.menu_looper.ReturnToTop()
@@ -379,14 +379,14 @@ class IdentifyPotionMenuItem(menu.MenuItem):
       self.menu_looper, self.kr, potion_unidentified_filter,
       'What type of potion did you identify? ')
     potion_type = type_menu.GetPlayerSelection()
-    if potion_type == None:
+    if potion_type == False:
       return
 
     desc_menu = GetUnidentifiedPotionDescriptionMenu(
       self.menu_looper, self.kr, potion_unidentified_filter,
       'What color potion was it? ')
     description = desc_menu.GetPlayerSelection()
-    if description == None:
+    if description == False:
       return
 
     self.kr.Identify('potion', potion_type, description)
@@ -406,7 +406,7 @@ class SellPotionMenuItem(menu.MenuItem):
       self.kr, seen_filter,
       'What color potion did you put up for sale? ')
     description = desc_menu.GetPlayerSelection()
-    if description == None:
+    if description == False:
       return
 
     # actually all of this is going to get bubbled up to a generic
@@ -459,7 +459,7 @@ class BuyPotionMenuItem(menu.MenuItem):
       self.kr, null_filter,
       'What color potion did you offer to buy? ')
     description = desc_menu.GetPlayerSelection()
-    if description == None:
+    if description == False:
       return
 
     # actually all this is going to get bubbled up to a generic

@@ -6,8 +6,8 @@ __author__ = 'gretta@gmail.com (Gretta Bartels)'
 
 import charisma
 import menu
+import object_knowledge_repository
 import objects
-import pickle
 
 
 ############################################################################
@@ -268,229 +268,6 @@ class ScrollClassFilter():
 
 
 ############################################################################
-# ScrollStore
-############################################################################
-
-
-class ScrollStore():
-  def __init__(self):
-    self.version = 2
-    self.canonical_scroll_classes = [
-      MailScrollClass(),
-      IdentifyScrollClass(),
-      LightScrollClass(),
-      BlankPaperScrollClass(),
-      EnchantWeaponScrollClass(),
-      EnchantArmorScrollClass(),
-      RemoveCurseScrollClass(),
-      ConfuseMonsterScrollClass(),
-      DestroyArmorScrollClass(),
-      FireScrollClass(),
-      FoodDetectionScrollClass(),
-      GoldDetectionScrollClass(),
-      MagicMappingScrollClass(),
-      ScareMonsterScrollClass(),
-      TeleportationScrollClass(),
-      AmnesiaScrollClass(),
-      CreateMonsterScrollClass(),
-      EarthScrollClass(),
-      TamingScrollClass(),
-      ChargingScrollClass(),
-      GenocideScrollClass(),
-      PunishmentScrollClass(),
-      StinkingCloudScrollClass(),
-    ]
-
-    self.unidentified_scroll_classes = [
-      ZelgoScrollClass(),
-      PratyavayahScrollClass(),
-      ElbibScrollClass(),
-      YumScrollClass(),
-      AndovaScrollClass(),
-      VeloxScrollClass(),
-      ReadScrollClass(),
-      JuyedScrollClass(),
-      DaiyenScrollClass(),
-      VerrScrollClass(),
-      KernodScrollClass(),
-      KirjeScrollClass(),
-      FoobieScrollClass(),
-      NrScrollClass(),
-      LepScrollClass(),
-      VenzarScrollClass(),
-      ElamScrollClass(),
-      VeScrollClass(),
-      TemovScrollClass(),
-      XixaxaScrollClass(),
-      PrirutsenieScrollClass(),
-      TharrScrollClass(),
-      DuamScrollClass(),
-      HackemScrollClass(),
-      GarvenScrollClass(),
-    ]
-
-    self.price_bands = { }
-    self.InitPriceBands()
-
-  def InitPriceBands(self):
-    for scroll_class in self.canonical_scroll_classes:
-      try:
-        self.price_bands[scroll_class.cost].append(scroll_class)
-      except KeyError:
-        self.price_bands[scroll_class.cost] = [scroll_class]
-
-  def SaveToFile(self, filename):
-    output_file = open(filename, 'wb')
-    pickle.dump(self.version, output_file)
-    pickle.dump(self.canonical_scroll_classes, output_file)
-    pickle.dump(self.unidentified_scroll_classes, output_file)
-    pickle.dump(self.price_bands, output_file)
-    output_file.close()
-
-
-  def LoadFromFile(self, filename):
-    input_file = open(filename, 'rb')
-    try:
-      version = pickle.load(input_file)
-    except:
-      print "Can't read this file!"
-      return
-    if version != self.version:
-      print "File version does not match!  Can't load this file."
-      return
-    try:
-      self.canonical_scroll_classes = pickle.load(input_file)
-      self.unidentified_scroll_classes = pickle.load(input_file)
-      self.price_bands = pickle.load(input_file)
-      return
-    except:
-      print "Can't read this file!"
-    input_file.close()
-
-
-  def ClearState(self):
-    self.__init__()
-
-
-  def See(self, description):
-    scroll_class = self.FindUnidentified(description)
-    scroll_class.See()
-
-
-  def FindUnidentified(self, description):
-    for scroll_class in self.unidentified_scroll_classes:
-      if scroll_class.unidentified_description == description:
-        return scroll_class
-    return None
-
-
-  def FindCanonical(self, description):
-    for scroll_class in self.canonical_scroll_classes:
-      if scroll_class.identified_description == description:
-        return scroll_class
-    return None
-
-
-  def Merge(self, canonical_scroll_class, unidentified_scroll_class):
-    canonical_scroll_class.unidentified_description = \
-      unidentified_scroll_class.unidentified_description
-    canonical_scroll_class.user_assigned_name = \
-      unidentified_scroll_class.user_assigned_name
-    canonical_scroll_class.is_seen = True
-    self.unidentified_scroll_classes.remove(unidentified_scroll_class)
-
-  
-  def Identify(self, scroll_type, description):
-    canonical_scroll_class = self.FindCanonical(scroll_type)
-    if canonical_scroll_class == None:
-      print 'That scroll type does not exist.'
-      return
-    unidentified_scroll_class = self.FindUnidentified(description)
-    if unidentified_scroll_class == None:
-      print 'That scroll has already been identified.'
-      return
-    self.Merge(canonical_scroll_class, unidentified_scroll_class)
-    self.CollapsePriceBands()
-
-
-  def IsValidPrice(self, price):
-    return self.price_bands.has_key(price)
-
-
-  def CollapsePriceBands(self):
-    change = True
-    while change == True:
-      change = False
-      for cost, scroll_classes in self.price_bands.iteritems():
-        num_unidentified = 0
-        for scroll_class in scroll_classes:
-          if not scroll_class.IsIdentified():
-            num_unidentified = num_unidentified + 1
-            canonical_scroll_class = scroll_class
-        # if there is only one unidentified scroll in this price band,
-        # and we know an unidentified scroll at that price, identify it
-        if num_unidentified == 1:
-          for scroll_class in self.unidentified_scroll_classes:
-            if scroll_class.cost == cost:
-              self.Merge(canonical_scroll_class, scroll_class)
-              print 'By process of elimination, %s is %s!' % (
-                canonical_scroll_class.unidentified_description,
-                canonical_scroll_class.identified_description)
-              change = True
-        # if there are no unidentified scrolls in this price band,
-        # eliminate this price as a possible price for other scrolls
-        if num_unidentified == 0:
-          for scroll_class in self.unidentified_scroll_classes:
-            if type(scroll_class.cost) == set and cost in scroll_class.cost:
-              scroll_class.cost.remove(cost)
-              if len(scroll_class.cost) == 1:
-                scroll_class.cost = scroll_class.cost.pop()
-              print '%s can\'t cost %d' % (
-                scroll_class.unidentified_description, cost)
-              change = True
-
-
-  def AddPriceInformation(self, description, list_prices):
-    unidentified_scroll_class = self.FindUnidentified(description)
-    if len(list_prices) == 1:
-      unidentified_scroll_class.cost = list_prices.pop()
-      print "The %s scroll's list price is %d" % (
-        description, unidentified_scroll_class.cost)
-      self.CollapsePriceBands()
-    else:
-      unidentified_scroll_class.cost = list_prices
-      print "The %s scroll's list price is one of %s" % (
-        description, unidentified_scroll_class.cost)
-
-
-  def PrintCanonicalScrolls(self):
-    print 'Canonical scrolls:'
-    for cost, scroll_classes in sorted(self.price_bands.iteritems()):
-      print '  %d' % cost
-      for scroll_class in scroll_classes:
-        unidentified_description = scroll_class.unidentified_description
-        if unidentified_description == None:
-          unidentified_description = '?'
-        print '    %s - %s' % (scroll_class.identified_description,
-                             unidentified_description)
-
-  def PrintUnidentifiedScrolls(self):
-    print 'Unidentified scrolls:'
-    for scroll_class in self.unidentified_scroll_classes:
-      is_seen = ''
-      if scroll_class.is_seen == True:
-        is_seen = '(seen)'
-      cost = ''
-      if scroll_class.cost != None:
-        if type(scroll_class.cost) == set:
-          cost = '(ambiguous cost)'
-        else:
-          cost = '(%d)' % scroll_class.cost
-      print '  %s %s %s' % (scroll_class.unidentified_description,
-                            is_seen, cost)
-
-
-############################################################################
 # Scroll
 ############################################################################
 
@@ -518,16 +295,16 @@ class GetUnidentifiedScrollTypeMenuItem(menu.MenuItem):
 
 
 class GetUnidentifiedScrollTypeMenu(menu.DynamicMenu):
-  def __init__(self, menu_looper, scroll_store, scroll_class_filter,
+  def __init__(self, menu_looper, kr, scroll_class_filter,
                selection_prompt):
     menu.DynamicMenu.__init__(self)
     self.menu_looper = menu_looper
-    self.scroll_store = scroll_store
+    self.kr = kr
     self.scroll_class_filter = scroll_class_filter
     self.SetSelectionPrompt(selection_prompt)
 
   def SetMenuItems(self):
-    for scroll_class in self.scroll_store.canonical_scroll_classes:
+    for scroll_class in self.kr.canonical_classes['scroll']:
       if self.scroll_class_filter.Passes(scroll_class):
         self.AddMenuItem(
           GetUnidentifiedScrollTypeMenuItem(
@@ -545,16 +322,16 @@ class GetUnidentifiedScrollDescriptionMenuItem(menu.MenuItem):
 
 
 class GetUnidentifiedScrollDescriptionMenu(menu.DynamicMenu):
-  def __init__(self, menu_looper, scroll_store, scroll_class_filter,
+  def __init__(self, menu_looper, kr, scroll_class_filter,
                selection_prompt):
     menu.DynamicMenu.__init__(self)
     self.menu_looper = menu_looper
-    self.scroll_store = scroll_store
+    self.kr = kr
     self.scroll_class_filter = scroll_class_filter
     self.SetSelectionPrompt(selection_prompt)
 
   def SetMenuItems(self):
-    for scroll_class in self.scroll_store.unidentified_scroll_classes:
+    for scroll_class in self.kr.unidentified_classes['scroll']:
       if self.scroll_class_filter.Passes(scroll_class):
         self.AddMenuItem(
           GetUnidentifiedScrollDescriptionMenuItem(
@@ -563,62 +340,62 @@ class GetUnidentifiedScrollDescriptionMenu(menu.DynamicMenu):
 
 
 class SawScrollMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, scroll_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'See a scroll', menu_looper)
-    self.scroll_store = scroll_store
+    self.kr = kr
 
 
   def Handle(self):
     scroll_unseen_filter = ScrollClassFilter(not_seen=True)
     desc_menu = GetUnidentifiedScrollDescriptionMenu(self.menu_looper,
-      self.scroll_store, scroll_unseen_filter,
+      self.kr, scroll_unseen_filter,
       'What was the label on the scroll you saw? ')
     description = desc_menu.GetPlayerSelection()
-    if description != None:
-      self.scroll_store.See(description)
+    if description != False:
+      self.kr.See('scroll', description)
     print
     self.menu_looper.ReturnToTop()
 
 
 class IdentifyScrollMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, scroll_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'Identify a scroll', menu_looper)
-    self.scroll_store = scroll_store
+    self.kr = kr
 
   def Handle(self):
     scroll_unidentified_filter = ScrollClassFilter(not_identified=True)
     type_menu = GetUnidentifiedScrollTypeMenu(
-      self.menu_looper, self.scroll_store, scroll_unidentified_filter,
+      self.menu_looper, self.kr, scroll_unidentified_filter,
       'What type of scroll did you identify? ')
     scroll_type = type_menu.GetPlayerSelection()
-    if scroll_type == None:
+    if scroll_type == False:
       return
 
     desc_menu = GetUnidentifiedScrollDescriptionMenu(
-      self.menu_looper, self.scroll_store, scroll_unidentified_filter,
+      self.menu_looper, self.kr, scroll_unidentified_filter,
       'What label did the scroll have on it? ')
     description = desc_menu.GetPlayerSelection()
-    if description == None:
+    if description == False:
       return
 
-    self.scroll_store.Identify(scroll_type, description)
+    self.kr.Identify('scroll', scroll_type, description)
     print
     self.menu_looper.ReturnToTop()
 
 
 # Player is selling something to a shopkeeper
 class SellScrollMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, scroll_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'Put a scroll up for sale', menu_looper)
-    self.scroll_store = scroll_store
+    self.kr = kr
 
   def Handle(self):
     seen_filter = ScrollClassFilter(is_seen=True)
     desc_menu = GetUnidentifiedScrollDescriptionMenu(self.menu_looper,
-      self.scroll_store, seen_filter,
+      self.kr, seen_filter,
       'What was the label on the scroll you put up for sale? ')
     description = desc_menu.GetPlayerSelection()
-    if description == None:
+    if description == False:
       return
 
     # actually all of this is going to get bubbled up to a generic
@@ -627,8 +404,8 @@ class SellScrollMenuItem(menu.MenuItem):
 
     sale_price = int(raw_input('What sale price was offered? '))
 
-    self.scroll_store.AddPriceInformation(
-      description, self.GetListPricesFromSalePrice(sale_price,))
+    self.kr.AddPriceInformation('scroll', description,
+      self.GetListPricesFromSalePrice(sale_price))
 
     self.menu_looper.ReturnToTop()
 
@@ -637,20 +414,20 @@ class SellScrollMenuItem(menu.MenuItem):
     prices = []
     list_price = int(2.0 * sale_price)
     for price in [list_price, list_price - 1]:
-      if self.scroll_store.IsValidPrice(price):
+      if self.kr.IsValidPrice('scroll', price):
         prices.append(price)
       shop_markup_price = int(price * 1.334)
       for shop_price in [shop_markup_price, shop_markup_price - 1]:
-        if self.scroll_store.IsValidPrice(shop_price):
+        if self.kr.IsValidPrice('scroll', shop_price):
           prices.append(shop_price)
     return set(prices)
 
 
 # Player is buying something from a shopkeeper
 class BuyScrollMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, scroll_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'Buy a scroll', menu_looper)
-    self.scroll_store = scroll_store
+    self.kr = kr
 
   # this definitely doesn't belong here
   # input needs to be validated better, should create y/n question function
@@ -668,10 +445,10 @@ class BuyScrollMenuItem(menu.MenuItem):
   def Handle(self):
     null_filter = ScrollClassFilter()
     desc_menu = GetUnidentifiedScrollDescriptionMenu(self.menu_looper,
-      self.scroll_store, null_filter,
+      self.kr, null_filter,
       'What was the label on the scroll you offered to buy? ')
     description = desc_menu.GetPlayerSelection()
-    if description == None:
+    if description == False:
       return
 
     # actually all this is going to get bubbled up to a generic
@@ -686,10 +463,9 @@ class BuyScrollMenuItem(menu.MenuItem):
 
     sucker_factor = self.GetSuckerFactor()
 
-    self.scroll_store.AddPriceInformation(
-      description, self.GetListPricesFromBuyPrice(buy_price,
-                                                  charisma_factor,
-                                                  sucker_factor))
+    self.kr.AddPriceInformation('scroll', description,
+      self.GetListPricesFromBuyPrice(buy_price, charisma_factor,
+                                     sucker_factor))
     self.menu_looper.ReturnToTop()
 
   # this definitely doesn't belong here
@@ -698,59 +474,48 @@ class BuyScrollMenuItem(menu.MenuItem):
     list_price = int(buy_price / (charisma_factor * sucker_factor))
     prices = []
     for price in [list_price, list_price + 1]:
-      if self.scroll_store.IsValidPrice(price):
+      if self.kr.IsValidPrice('scroll', price):
         prices.append(price)
       shop_markup_price = int(price / 1.333)
       for shop_price in [shop_markup_price, shop_markup_price + 1]:
-        if self.scroll_store.IsValidPrice(shop_price):
+        if self.kr.IsValidPrice('scroll', shop_price):
           prices.append(shop_price)
     return set(prices)
 
 class ShowScrollInfoMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, scroll_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'Show all scroll information', menu_looper)
-    self.scroll_store = scroll_store
+    self.kr = kr
 
   def Handle(self):
-    self.scroll_store.PrintCanonicalScrolls()
-    self.scroll_store.PrintUnidentifiedScrolls()
+    self.kr.PrintCanonicalObjects('scroll')
+    self.kr.PrintUnidentifiedObjects('scroll')
     print
     self.menu_looper.ReturnToTop()
 
 
 class SaveToFileMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, scroll_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self, 'Save state to file', menu_looper)
-    self.scroll_store = scroll_store
+    self.kr = kr
 
   def Handle(self):
     filename = raw_input('File to save to: ')
-    self.scroll_store.SaveToFile(filename)
+    self.kr.SaveToFile(filename)
     print
     self.menu_looper.ReturnToTop()
 
 
 class LoadFromFileMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, scroll_store):
+  def __init__(self, menu_looper, kr):
     menu.MenuItem.__init__(self,
                            'Load state from file (current state will be lost!)',
                            menu_looper)
-    self.scroll_store = scroll_store
+    self.kr = kr
 
   def Handle(self):
     filename = raw_input('File to load from: ')
-    self.scroll_store.LoadFromFile(filename)
-    print
-    self.menu_looper.ReturnToTop()
-
-
-class ClearStateMenuItem(menu.MenuItem):
-  def __init__(self, menu_looper, scroll_store):
-    menu.MenuItem.__init__(self, 'Clear all known state', menu_looper)
-    self.scroll_store = scroll_store
-
-  def Handle(self):
-    self.scroll_store.ClearState()
+    self.kr.LoadFromFile(filename)
     print
     self.menu_looper.ReturnToTop()
 
@@ -759,26 +524,82 @@ class ClearStateMenuItem(menu.MenuItem):
 # main
 ############################################################################
 
+def SetUpScrollClasses(kr):
+  canonical_scroll_classes = [
+    MailScrollClass(),
+    IdentifyScrollClass(),
+    LightScrollClass(),
+    BlankPaperScrollClass(),
+    EnchantWeaponScrollClass(),
+    EnchantArmorScrollClass(),
+    RemoveCurseScrollClass(),
+    ConfuseMonsterScrollClass(),
+    DestroyArmorScrollClass(),
+    FireScrollClass(),
+    FoodDetectionScrollClass(),
+    GoldDetectionScrollClass(),
+    MagicMappingScrollClass(),
+    ScareMonsterScrollClass(),
+    TeleportationScrollClass(),
+    AmnesiaScrollClass(),
+    CreateMonsterScrollClass(),
+    EarthScrollClass(),
+    TamingScrollClass(),
+    ChargingScrollClass(),
+    GenocideScrollClass(),
+    PunishmentScrollClass(),
+    StinkingCloudScrollClass(),
+  ]
+  unidentified_scroll_classes = [
+    ZelgoScrollClass(),
+    PratyavayahScrollClass(),
+    ElbibScrollClass(),
+    YumScrollClass(),
+    AndovaScrollClass(),
+    VeloxScrollClass(),
+    ReadScrollClass(),
+    JuyedScrollClass(),
+    DaiyenScrollClass(),
+    VerrScrollClass(),
+    KernodScrollClass(),
+    KirjeScrollClass(),
+    FoobieScrollClass(),
+    NrScrollClass(),
+    LepScrollClass(),
+    VenzarScrollClass(),
+    ElamScrollClass(),
+    VeScrollClass(),
+    TemovScrollClass(),
+    XixaxaScrollClass(),
+    PrirutsenieScrollClass(),
+    TharrScrollClass(),
+    DuamScrollClass(),
+    HackemScrollClass(),
+    GarvenScrollClass(),
+  ]
+  kr.SetClasses('scroll', canonical_scroll_classes,
+                unidentified_scroll_classes)
+
 
 def main():
-  scroll_store = ScrollStore()
+  kr = object_knowledge_repository.ObjectKnowledgeRepository()
+  SetUpScrollClasses(kr)
 
   menu_looper = menu.MenuLooper()
 
   scroll_menu = menu.Menu()
-  scroll_menu.AddMenuItem(SawScrollMenuItem(menu_looper, scroll_store))
-  scroll_menu.AddMenuItem(IdentifyScrollMenuItem(menu_looper, scroll_store))
-  scroll_menu.AddMenuItem(SellScrollMenuItem(menu_looper, scroll_store))
-  scroll_menu.AddMenuItem(BuyScrollMenuItem(menu_looper, scroll_store))
-  scroll_menu.AddMenuItem(ShowScrollInfoMenuItem(menu_looper, scroll_store))
+  scroll_menu.AddMenuItem(SawScrollMenuItem(menu_looper, kr))
+  scroll_menu.AddMenuItem(IdentifyScrollMenuItem(menu_looper, kr))
+  scroll_menu.AddMenuItem(SellScrollMenuItem(menu_looper, kr))
+  scroll_menu.AddMenuItem(BuyScrollMenuItem(menu_looper, kr))
+  scroll_menu.AddMenuItem(ShowScrollInfoMenuItem(menu_looper, kr))
   scroll_menu.AddMenuItem(menu.ReturnToTopMenuItem(menu_looper))
 
   main_menu = menu.Menu()
   main_menu.AddMenuItem(menu.SubMenuMenuItem('Work on identifying scrolls',
                                              menu_looper, scroll_menu))
-  main_menu.AddMenuItem(SaveToFileMenuItem(menu_looper, scroll_store))
-  main_menu.AddMenuItem(LoadFromFileMenuItem(menu_looper, scroll_store))
-  main_menu.AddMenuItem(ClearStateMenuItem(menu_looper, scroll_store))
+  main_menu.AddMenuItem(SaveToFileMenuItem(menu_looper, kr))
+  main_menu.AddMenuItem(LoadFromFileMenuItem(menu_looper, kr))
   main_menu.AddMenuItem(menu.QuitMenuItem(menu_looper))
 
   menu_looper.SetTopMenu(main_menu)

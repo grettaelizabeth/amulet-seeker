@@ -1,6 +1,5 @@
 #!/usr/bin/python
-"""A test suite for potion.py.
-"""
+"""A test suite for potion.py."""
 
 __author__ = 'gretta@gmail.com (Gretta Bartels)'
 

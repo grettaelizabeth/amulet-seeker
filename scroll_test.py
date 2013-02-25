@@ -1,11 +1,11 @@
 #!/usr/bin/python
-"""A test suite for scroll.py.
-"""
+"""A test suite for scroll.py."""
 
 __author__ = 'gretta@gmail.com (Gretta Bartels)'
 
 import charisma
 import menu
+import object_knowledge_repository
 import scroll
 
 def ExpectEqual(a, b):
@@ -14,12 +14,12 @@ def ExpectEqual(a, b):
     print a
     print b
 
-def TestScrollStore(scroll_store):
-  ExpectEqual(scroll_store.IsValidPrice(50), True)
-  ExpectEqual(scroll_store.IsValidPrice(100), True)
-  ExpectEqual(scroll_store.IsValidPrice(300), True)
-  ExpectEqual(scroll_store.IsValidPrice(40), False)
-  ExpectEqual(scroll_store.IsValidPrice('frog'), False)
+def TestScrollStore(kr):
+  ExpectEqual(kr.IsValidPrice('scroll', 50), True)
+  ExpectEqual(kr.IsValidPrice('scroll', 100), True)
+  ExpectEqual(kr.IsValidPrice('scroll', 300), True)
+  ExpectEqual(kr.IsValidPrice('scroll', 40), False)
+  ExpectEqual(kr.IsValidPrice('scroll', 'frog'), False)
 
 
 def TestGetListPricesFromSalePrice(sell_scroll_menu_item):
@@ -74,33 +74,33 @@ def TestGetListPricesFromBuyPriceWithSuckerFactor(buy_scroll_menu_item):
   ExpectEqual(buy_scroll_menu_item.GetListPricesFromBuyPrice(
           177, charisma.Charisma(11).CharismaFactor(), 1.33), set([100]))
   
-def TestIdentifyScrollByElimination(scroll_store):
-  scroll_store.Identify('charging', 'ZELGO MER')
-  scroll_store.Identify('genocide', 'ELBIB YLOH')
-  scroll_store.Identify('punishment', 'VE FORBRYDERNE')
-  scroll_store.See('NR 9')
-  scroll_store.AddPriceInformation('NR 9', set([300]))
-  stinking_scroll = scroll_store.FindCanonical('stinking cloud')
+def TestIdentifyScrollByElimination(kr):
+  kr.Identify('scroll', 'charging', 'ZELGO MER')
+  kr.Identify('scroll', 'genocide', 'ELBIB YLOH')
+  kr.Identify('scroll', 'punishment', 'VE FORBRYDERNE')
+  kr.See('scroll', 'NR 9')
+  kr.AddPriceInformation('scroll', 'NR 9', set([300]))
+  stinking_scroll = kr.FindCanonical('scroll', 'stinking cloud')
   ExpectEqual(stinking_scroll.unidentified_description, 'NR 9')
 
 
-def TestCascadingIdentifyScrollByElimination(scroll_store):
+def TestCascadingIdentifyScrollByElimination(kr):
   # 1/2 scrolls at 60 is known (blank paper is free)
 
   # 1/2 scrolls at 80 is known
-  scroll_store.Identify('enchant armor', 'DUAM XNAHT')
+  kr.Identify('scroll', 'enchant armor', 'DUAM XNAHT')
 
   # one scroll is either 60 or 80
-  scroll_store.AddPriceInformation('READ ME', set([60, 80]))
+  kr.AddPriceInformation('scroll', 'READ ME', set([60, 80]))
 
   # nothing should happen here
-  enchant_weapon_scroll = scroll_store.FindCanonical('enchant weapon')
-  remove_curse_scroll = scroll_store.FindCanonical('remove curse')
+  enchant_weapon_scroll = kr.FindCanonical('scroll', 'enchant weapon')
+  remove_curse_scroll = kr.FindCanonical('scroll', 'remove curse')
   ExpectEqual(enchant_weapon_scroll.IsIdentified(), False)
   ExpectEqual(remove_curse_scroll.IsIdentified(), False)
 
   # now we find a scroll at 80
-  scroll_store.AddPriceInformation('THARR', set([80]))
+  kr.AddPriceInformation('scroll', 'THARR', set([80]))
 
   # we should have seen READ ME get matched to enchant weapon and
   # THARR get matched to remove curse - let's verify
@@ -111,19 +111,22 @@ def TestCascadingIdentifyScrollByElimination(scroll_store):
 
 
 def main():
-  scroll_store = scroll.ScrollStore()
-  menu_looper = menu.MenuLooper()
-  sell_scroll_menu_item = scroll.SellScrollMenuItem(menu_looper, scroll_store)
-  buy_scroll_menu_item = scroll.BuyScrollMenuItem(menu_looper, scroll_store)
+  kr = object_knowledge_repository.ObjectKnowledgeRepository()
+  scroll.SetUpScrollClasses(kr)
 
-  TestScrollStore(scroll_store)
+  menu_looper = menu.MenuLooper()
+  sell_scroll_menu_item = scroll.SellScrollMenuItem(menu_looper, kr)
+  buy_scroll_menu_item = scroll.BuyScrollMenuItem(menu_looper, kr)
+
+  TestScrollStore(kr)
   TestGetListPricesFromSalePrice(sell_scroll_menu_item)
   TestGetListPricesFromBuyPrice(buy_scroll_menu_item)
   TestGetListPricesFromBuyPriceWithSuckerFactor(buy_scroll_menu_item)
-  TestIdentifyScrollByElimination(scroll_store)
+  TestIdentifyScrollByElimination(kr)
 
-  scroll_store_2 = scroll.ScrollStore()
-  TestCascadingIdentifyScrollByElimination(scroll_store_2)
+  kr_2 = object_knowledge_repository.ObjectKnowledgeRepository()
+  scroll.SetUpScrollClasses(kr_2)
+  TestCascadingIdentifyScrollByElimination(kr_2)
 
 if __name__ == '__main__':
   main()
