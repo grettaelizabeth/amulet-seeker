@@ -1,0 +1,1 @@
+The ultimate goal is to write an autonomous nethack bot, but to start with, we'll make tools to assist the human player.
